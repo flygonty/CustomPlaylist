@@ -1,4 +1,3 @@
-# R_Class
 # Final Project
 
 ## packages
