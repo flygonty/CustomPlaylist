@@ -22,6 +22,6 @@ access_token <- get_spotify_access_token()
 You should fill up your token`
 
 ## Project Architecture
-* 1. run R script for capturing user dataset
-* 2. show a list of user's top 10 songs
-* 3. Then create user's customized playlist
+* Run R script for capturing user dataset
+* Show a list of user's top 10 songs
+* Then create user's customized playlist
