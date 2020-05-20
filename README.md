@@ -20,7 +20,6 @@ Later on, we would use this id and secret to access your account.`
 Sys.setenv(SPOTIFY_CLIENT_ID = 'xxxxxxxxxxxxxxxxxxxxx')
 Sys.setenv(SPOTIFY_CLIENT_SECRET = 'xxxxxxxxxxxxxxxxxxxxx')
 access_token <- get_spotify_access_token()
-You should fill up your token
 ```
 
 ## Project Architecture
