@@ -1,8 +1,9 @@
 # ShowMyPathOfLifeExperience
 
-Before we start, you should create a client id in WebAPI
+`Before we start, you should create a client id in WebAPI
 Once you finish this step, you'll get Client ID and Client Secret
 This ID and Secret should be private. Don't leak it to anyone!
+`
 
 ## Packages
 * spotifyr
