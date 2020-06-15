@@ -7,8 +7,8 @@ if(require("Rspotify")) {
 library(Rspotify)
 
 appId = 'R_Class'
-clientId = '25db64d3498a4bc6a5f685acc41e4645'
-clientSecret = '2e272fb78502491fb209288ca6d324f3'
+clientId = ''
+clientSecret = ''
 
 my_oauth <- spotifyOAuth(app_id=appId,client_id=clientId,client_secret=clientSecret)
 save(my_oauth,file="my_oauth")
