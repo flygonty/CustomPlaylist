@@ -7,12 +7,11 @@ This ID and Secret should be private. Don't leak it to anyone!
 Later on, we would use this id and secret to access your account.`
 
 ## Packages
-* spotifyr
-`install.packages(spotifyr)`
-* lubridate
-`install.packages(lubridate)`
-* ggjoy
-`install.packages(ggjoy)`
+* httr
+`install.packages(httr)`
+* stringr
+`install.packages(stringr)`
+
 
 ## Dataset
 `Use personal spotify data`
