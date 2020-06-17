@@ -1,54 +1,103 @@
 rm(list=ls())
 
-if(require("Rspotify")) {
-  install.packages("Rspotify")
-}
-
-library(Rspotify)
+library('httr')
+library('stringr')
 
 appId = 'R_Class'
 clientId = ''
 clientSecret = ''
 
-my_oauth <- spotifyOAuth(app_id=appId,client_id=clientId,client_secret=clientSecret)
-save(my_oauth,file="my_oauth")
-load("my_oauth")
-myProfile <- getUser(user_id="11164078102",token=my_oauth)
 
-getUser<-function(user_id,token){
-  req <- httr::GET(paste0("https://api.spotify.com/v1/users/",user_id), httr::config(token = token))
-  json1<-httr::content(req)
-  dados=data.frame(display_name=json1$display_name,
-                   id=json1$id,
-                   followers=json1$followers$total,stringsAsFactors = F)
-  return(dados)
+# authentication and get user profile
+specificOAuth<-function(app_id,client_id,client_secret,scope='playlist-read-private'){
+  spotifyR <- httr::oauth_endpoint(
+    authorize = "https://accounts.spotify.com/authorize",
+    access = "https://accounts.spotify.com/api/token")
+  myapp <- httr::oauth_app(app_id, client_id, client_secret)
+  return(httr::oauth2.0_token(spotifyR, myapp,scope = scope))
 }
 
-getUserPlaylists <- function( user_id, token ) {
-  base_url <- 'https://api.spotify.com/v1/users'
-  url <- str_glue('{base_url}/{user_id}/playlists')
-  req <- httr::GET(url,httr::config(token=token))
+getUserID <- function() {
+  my_oauth <- specificOAuth(app_id=appId,client_id=clientId,client_secret=clientSecret,scope=c('user-read-private','user-read-email'))
+  save(my_oauth,file="my_oauth")
+  load("my_oauth")
+  url <- 'https://api.spotify.com/v1/me'
+  req <- httr::GET(url,httr::config(token=my_oauth))
   json1 <- httr::content(req)
+  return(json1$id)
+}
+
+
+my_oauth <- specificOAuth(app_id=appId,client_id=clientId,client_secret=clientSecret)
+save(my_oauth,file="my_oauth")
+load("my_oauth")
+userID = getUserID()
+
+
+getUserTop <- function(type='artists',limit=10,offset=5,time_range='medium_term') {
+  my_oauth <- specificOAuth(app_id=appId,client_id=clientId,client_secret=clientSecret,scope='user-top-read')
+  base_url <- 'https://api.spotify.com/v1/me/top'
+  url <- str_glue('{base_url}/{type}')
+  params <- list(limit = limit,offset = offset,time_range = time_range )
+  req <- httr::GET(url,httr::config(token=my_oauth),query=params)
+  json1 <- httr::content(req)
+  top <- lapply(1:length(json1$items),function(x) json1$items[[x]]$name)
   return(json1)
 }
 
-createPlaylist <- function( user_id, name, public = TRUE, collaborative = FALSE, description = NULL, token ) {
+createPlayList <- function(userID,name='New Playlist',description='New playlist description',public='false') {
+  my_oauth <- specificOAuth(app_id=appId,client_id=clientId,client_secret=clientSecret,scope=c('playlist-modify-public','playlist-modify-private'))
   base_url <- 'https://api.spotify.com/v1/users'
-  url <- str_glue('{base_url}/{user_id}/playlists')
-  req <- httr::POST(url,httr::config(token=token))
+  url <- str_glue('{base_url}/{userID}/playlists')
+  body <- list(name=name,description=description,public=public)
+  req <- RETRY('POST',url,body=body,config(token=my_oauth),encode='json')
 }
 
-create_playlist <- function(user_id, name, public = TRUE, collaborative = FALSE, description = NULL, authorization = get_spotify_authorization_code()) {
-  base_url <- 'https://api.spotify.com/v1/users'
-  url <- str_glue('{base_url}/{user_id}/playlists')
-  params <- list(
-    name = name,
-    public = public,
-    collaborative  = collaborative,
-    description = description
-  )
-  res <- RETRY('POST', url, body = params, config(token = authorization), encode = 'json')
-  stop_for_status(res)
-  res <- fromJSON(content(res, as = 'text', encoding = 'UTF-8'), flatten = TRUE)
-  return(res)
+getTopArtistsID <- function(type='artists',limit=10,offset=5,time_range='medium_term'){
+  my_oauth <- specificOAuth(app_id=appId,client_id=clientId,client_secret=clientSecret,scope='user-top-read')
+  base_url <- 'https://api.spotify.com/v1/me/top'
+  url <- str_glue('{base_url}/{type}')
+  params <- list(limit = limit,offset = offset,time_range = time_range )
+  req <- httr::GET(url,httr::config(token=my_oauth),query=params)
+  json1 <- httr::content(req)
+  id <- lapply(1:length(json1$items),function(x) json1$items[[x]]$id)
+  return(id)
+}
+
+getAnArtist <- function(artistID) {
+  my_oauth <- specificOAuth(app_id=appId,client_id=clientId,client_secret=clientSecret)
+  base_url <- 'https://api.spotify.com/v1/artists'
+  url <- str_glue('{base_url}/{artistID}')
+  req <- httr::GET(url,httr::config(token=my_oauth))
+  json1 <- httr::content(req)
+  info <- data.frame(type=json1$genres,name=json1$name,popularity=json1$popularity)
+  return(info)
+}
+
+getAnArtistTopTracksID<-function(artistID){
+  my_oauth <- specificOAuth(app_id=appId,client_id=clientId,client_secret=clientSecret)
+  base_url <- 'https://api.spotify.com/v1/artists'
+  url <- str_glue('{base_url}/{artistID}/top-tracks')
+  params <- list(country='US')
+  req <- httr::GET(url,httr::config(token=my_oauth),query=params)
+  json1 <- httr::content(req)
+  info <- lapply(1:length(json1$items),function(x) json1$items[[x]]$id)
+  return(info)
+}
+
+getAnArtistRelatedID<-function(artistID){
+  my_oauth <- specificOAuth(app_id=appId,client_id=clientId,client_secret=clientSecret)
+  base_url <- 'https://api.spotify.com/v1/artists'
+  url <- str_glue('{base_url}/{artistID}/related-artists')
+  req <- httr::GET(url,httr::config(token=my_oauth))
+  json1 <- httr::content(req)
+  info <- lapply(1:length(json1$artists),function(x) json1$artists[[x]]$id)
+  return(info)
+}
+
+getRelatedTrackID<-function(type='artists',limit=10,offset=5,time_range='medium_term'){
+  # first get top artists id
+  topID <- getTopArtistsID(type,limit,offset,time_range)
+  relatedID <- lapply(1:length(topID),function(x) getAnArtistRelatedID(topID[[x]]))
+  return(relatedID)
 }
