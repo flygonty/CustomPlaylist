@@ -25,3 +25,7 @@ access_token <- get_spotify_access_token()
 * Run R script for capturing user dataset
 * Show a list of user's top 10 songs
 * Then create user's customized playlist
+
+## Future
+* I would release package 'spotifyR' on CRAN which is a complete package on spotify
+* Please wait for a month ! due to my final project and exam.
