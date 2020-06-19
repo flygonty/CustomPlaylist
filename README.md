@@ -15,10 +15,19 @@ Later on, we would use this id and secret to access your account.`
 
 ## Dataset
 `Use personal spotify data`
+* How to access your token ?
 ```
 appId = ''
 clientId = ''
 clientSecret = ''
+
+my_oauth <- allScopeOAuth(app_id=appId,client_id=clientId,client_secret=clientSecret)
+save(my_oauth,file="my_oauth")
+load("my_oauth")
+
+# By doing this you could successfully access !
+# If you don't want to use all scope you could use this function
+# my_oauth <- specificOAuth(app_id=appId,client_id=clientId,client_secret=clientSecret)
 ```
 
 ## Project Architecture
