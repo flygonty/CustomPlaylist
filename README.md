@@ -16,15 +16,19 @@ Later on, we would use this id and secret to access your account.`
 ## Dataset
 `Use personal spotify data`
 ```
-Sys.setenv(SPOTIFY_CLIENT_ID = 'xxxxxxxxxxxxxxxxxxxxx')
-Sys.setenv(SPOTIFY_CLIENT_SECRET = 'xxxxxxxxxxxxxxxxxxxxx')
-access_token <- get_spotify_access_token()
+appId = ''
+clientId = ''
+clientSecret = ''
 ```
 
 ## Project Architecture
 * Run R script for capturing user dataset
 * Show a list of user's top 10 songs
 * Then create user's customized playlist
+
+## Project Outcome
+* Build Custom Playlist
+* Can build danceable and energy playlist
 
 ## Future
 * I would release package 'spotifyR' on CRAN which is a complete package on spotify
