@@ -8,11 +8,12 @@ clientId = ''
 clientSecret = ''
 
 allScope <- c('user-read-playback-position','user-read-email',
-'user-library-read','user-top-read','playlist-modify-public',
-'user-follow-read','user-read-playback-state','user-modify-playback-state',
-'user-read-private','playlist-read-private','user-library-modify',
-'playlist-read-collaborative','playlist-modify-private','user-follow-modify',
-'user-read-currently-playing','user-read-recently-played')
+              'user-library-read','user-top-read','playlist-modify-public',
+              'user-follow-read','user-read-playback-state','user-modify-playback-state',
+              'user-read-private','playlist-read-private','user-library-modify',
+              'playlist-read-collaborative','playlist-modify-private','user-follow-modify',
+              'user-read-currently-playing','user-read-recently-played')
+
 
 # limit scope
 specificOAuth<-function(app_id,client_id,client_secret,scope='playlist-read-private'){
@@ -62,6 +63,13 @@ getUserTop <- function(type='artists',limit=10,offset=5,time_range='medium_term'
   req <- httr::GET(url,httr::config(token=my_oauth),query=params)
   json1 <- httr::content(req)
   top <- lapply(1:length(json1$items),function(x) json1$items[[x]]$name)
+  return(json1)
+}
+
+getAListOfCurrentUserPlaylists<-function(limit=10,offset=5,my_oauth){
+  url <- 'https://api.spotify.com/v1/me/playlists'
+  req <- httr::GET(url,httr::config(token=my_oauth))
+  json1 <- httr::content(req)
   return(json1)
 }
 
@@ -134,6 +142,14 @@ getAudioFeaturesForATrack<-function(trackID,my_oauth){
   return(json1)
 }
 
+getAudioFeaturesForSeveralTrack<-function(ids,my_oauth){
+  url <- 'https://api.spotify.com/v1/audio-features'
+  params <- list(ids=ids)
+  req <- httr::GET(url,httr::config(token=my_oauth),query=params)
+  json1 <- httr::content(req)
+  return(json1)
+}
+
 getATrack<-function(trackID,my_oauth){
   base_url <- 'https://api.spotify.com/v1/tracks'
   url <- str_glue('{base_url}/{trackID}')
@@ -143,4 +159,112 @@ getATrack<-function(trackID,my_oauth){
   return(json1)
 }
 
+addItemsToaPlaylist<-function(playlist_id,my_oauth,uris){
+  base_url <- 'https://api.spotify.com/v1/playlists'
+  url <- str_glue('{base_url}/{playlist_id}/tracks')
+  params <- list(uris=uris)
+  req <- httr::POST(url,httr::config(token=my_oauth),query=params)
+}
+
+######################################################
+##################Project Start#######################
+######################################################
+
+# create a new playlist
 createPlayList(userID,my_oauth=my_oauth)
+
+# Get user top artist ID and track ID
+topArtistID<-getTopArtistsID(my_oauth = my_oauth)
+trackID <- lapply(1:length(topArtistID),function(x) getAnArtistTopTracksID(topArtistID[[x]],my_oauth = my_oauth))
+
+# Get new playlist id
+playlist_json <- getAListOfCurrentUserPlaylists(my_oauth = my_oauth)
+playlist_id <- playlist_json$items[[1]]$id # first always new playlist
+
+# uris <- lapply(1:length(trackID),function(x) lapply( 1:length(trackID[[x]]), function(y) paste0("spotify:track:",trackID[[x]][[y]])) )
+# uris_list <- lapply(1:length(uris), function(x) paste0(uris[[x]], collapse = ',')) # 10 tracks
+
+ids <- lapply(1:length(trackID), function(x) paste0(trackID[[x]], collapse = ',')) # 10 tracks [[1]]
+# uris_list <- paste0(uris_list, collapse = ',') 
+
+# Get feature
+# features <- getAudioFeaturesForSeveralTrack(ids[[1]],my_oauth)
+features_list <- lapply(1:length(ids), function(x) getAudioFeaturesForSeveralTrack(ids[[x]],my_oauth))
+
+
+
+
+danceabilityTracksList <- lapply(1:length(features_list),
+                          function(x) lapply(1:length(features_list[[x]]$audio_features), 
+                          function(y) if(features_list[[x]]$audio_features[[y]]$danceability>0.75) features_list[[x]]$audio_features[[y]]$id))
+
+
+for(i in c(1:length(danceabilityTracksList))){ # clean null data
+  danceabilityTracksList[[i]][sapply(danceabilityTracksList[[i]], is.null)] <- NULL
+}
+
+danceabilityTracksList <- danceabilityTracksList[lapply(danceabilityTracksList,length)>0] # remove 0 elements list
+danceabilityTracksList <- lapply(1:length(danceabilityTracksList), function(x) lapply(1:length(danceabilityTracksList[[x]]), function(y) paste0('spotify:track:',danceabilityTracksList[[x]][[y]])))
+danceList <- lapply(1:length(danceabilityTracksList), function(x) paste(danceabilityTracksList[[x]],collapse = ',') ) # tracks_ids
+
+
+#########
+# danceabilityTracks <- lapply(1:length(features$audio_features), function(x) getDanceability(features,x) )
+# danceabilityTracks[sapply(danceabilityTracks, is.null)] <- NULL # remove NULL elements
+# danceabilityTracksIDs <- paste0(danceabilityTracks, collapse = ',')
+#########
+
+lapply(1:length(danceList), function(x) addItemsToaPlaylist(playlist_id,my_oauth = my_oauth,danceList[[x]]) )
+
+getDanceabilityPlaylist<-function(userID,my_oauth=my_oauth){
+  createPlayList(userID,name='Dance playlist',description='Dance playlist',my_oauth=my_oauth)
+  # Get artist id and new playlist id
+  topArtistID<-getTopArtistsID(my_oauth = my_oauth)
+  trackID <- lapply(1:length(topArtistID),function(x) getAnArtistTopTracksID(topArtistID[[x]],my_oauth = my_oauth))
+  # Get new playlist id
+  playlist_json <- getAListOfCurrentUserPlaylists(my_oauth = my_oauth)
+  playlist_id <- playlist_json$items[[1]]$id # first always new playlist
+  ids <- lapply(1:length(trackID), function(x) paste0(trackID[[x]], collapse = ',')) # 10 tracks [[1]]
+  features_list <- lapply(1:length(ids), function(x) getAudioFeaturesForSeveralTrack(ids[[x]],my_oauth))
+  danceabilityTracksList <- lapply(1:length(features_list),
+                            function(x) lapply(1:length(features_list[[x]]$audio_features), 
+                              function(y) if(features_list[[x]]$audio_features[[y]]$danceability>0.75) features_list[[x]]$audio_features[[y]]$id))
+  for(i in c(1:length(danceabilityTracksList))){ # clean null data
+    danceabilityTracksList[[i]][sapply(danceabilityTracksList[[i]], is.null)] <- NULL
+  }
+  
+  danceabilityTracksList <- danceabilityTracksList[lapply(danceabilityTracksList,length)>0] # remove 0 elements list
+  danceabilityTracksList <- lapply(1:length(danceabilityTracksList), function(x) lapply(1:length(danceabilityTracksList[[x]]), function(y) paste0('spotify:track:',danceabilityTracksList[[x]][[y]])))
+  danceList <- lapply(1:length(danceabilityTracksList), function(x) paste(danceabilityTracksList[[x]],collapse = ',') ) # tracks_ids
+  lapply(1:length(danceList), function(x) addItemsToaPlaylist(playlist_id,my_oauth = my_oauth,danceList[[x]]) )
+  
+}
+
+getDanceabilityPlaylist(userID = userID,my_oauth = my_oauth)
+
+getEnergyPlaylist<-function(userID,my_oauth=my_oauth){
+  createPlayList(userID,name='Energy playlist',description='Energy playlist',my_oauth=my_oauth)
+  # Get artist id and new playlist id
+  topArtistID<-getTopArtistsID(my_oauth = my_oauth)
+  trackID <- lapply(1:length(topArtistID),function(x) getAnArtistTopTracksID(topArtistID[[x]],my_oauth = my_oauth))
+  # Get new playlist id
+  playlist_json <- getAListOfCurrentUserPlaylists(my_oauth = my_oauth)
+  playlist_id <- playlist_json$items[[1]]$id # first always new playlist
+  ids <- lapply(1:length(trackID), function(x) paste0(trackID[[x]], collapse = ',')) # 10 tracks [[1]]
+  features_list <- lapply(1:length(ids), function(x) getAudioFeaturesForSeveralTrack(ids[[x]],my_oauth))
+  energyTracksList <- lapply(1:length(features_list),
+                                   function(x) lapply(1:length(features_list[[x]]$audio_features), 
+                                                      function(y) if(features_list[[x]]$audio_features[[y]]$energy>0.75) features_list[[x]]$audio_features[[y]]$id))
+  for(i in c(1:length(energyTracksList))){ # clean null data
+    energyTracksList[[i]][sapply(energyTracksList[[i]], is.null)] <- NULL
+  }
+  
+  energyTracksList <- energyTracksList[lapply(energyTracksList,length)>0] # remove 0 elements list
+  energyTracksList <- lapply(1:length(energyTracksList), function(x) lapply(1:length(energyTracksList[[x]]), function(y) paste0('spotify:track:',energyTracksList[[x]][[y]])))
+  energyList <- lapply(1:length(energyTracksList), function(x) paste(energyTracksList[[x]],collapse = ',') ) # tracks_ids
+  lapply(1:length(energyList), function(x) addItemsToaPlaylist(playlist_id,my_oauth = my_oauth,energyList[[x]]) )
+  
+}
+
+
+getEnergyPlaylist(userID = userID,my_oauth = my_oauth)
